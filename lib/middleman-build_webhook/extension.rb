@@ -26,6 +26,7 @@ class MiddlemanBuildWebhook < ::Middleman::Extension
     url = URI.parse(options.url)
     req = Net::HTTP::Post.new(url.path)
     req.basic_auth options.username, options.password
+    req.use_ssl = true
     resp = Net::HTTP.new(url.host, url.port).start {|http| http.request(req) }
     if resp.code == 200
       puts "Success! #{resp.code} - #{resp.message}"
