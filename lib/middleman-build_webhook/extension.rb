@@ -15,6 +15,7 @@ class MiddlemanBuildWebhook < ::Middleman::Extension
     # Require libraries only when activated
     # require 'necessary/library'
     require 'net/http'
+    require 'net/https'
     require 'uri'
 
     # set up your extension
@@ -24,11 +25,28 @@ class MiddlemanBuildWebhook < ::Middleman::Extension
   def after_build
     puts "Posting webhook"
     url = URI.parse(options.url)
-    req = Net::HTTP::Post.new(url.path)
-    req.basic_auth options.username, options.password
-    req.use_ssl = true
-    resp = Net::HTTP.new(url.host, url.port).start {|http| http.request(req) }
-    if resp.code == 200
+
+    if url.scheme == 'http'
+      # http
+      req = Net::HTTP::Post.new(url.path)
+      req.basic_auth options.username, options.password
+      resp = Net::HTTP.new(url.host, url.port).start {|http| http.request(req) }
+    else
+      # https
+      Net::HTTP.start(url.host, url.port,
+      :use_ssl => url.scheme == 'https',
+      :verify_mode => OpenSSL::SSL::VERIFY_NONE) do |http|
+
+      request = Net::HTTP::Post.new url.request_uri
+      request.basic_auth options.username, options.password
+
+      resp = http.request request # Net::HTTPResponse object
+    end
+    end
+
+    puts resp.code
+
+    if resp.code === '200'
       puts "Success! #{resp.code} - #{resp.message}"
     else
       puts "Failure! :( #{resp.code} - #{resp.message}"
